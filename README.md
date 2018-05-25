@@ -18,4 +18,4 @@ This is only tested with very simple cases, so there are probably lots of cases 
 
 ## Disclaimers
 
-This is just tested for my own purposes, with data exported from [http://bokio.io] you should always manually verify the files produced. Improvement PR:s and comments are welcome!
+This is just tested for my own purposes, with data exported from [http://bokio.se] you should always manually verify the files produced. Improvement PR:s and comments are welcome!
