@@ -56,10 +56,12 @@ struct SIE {
         var balances: [Balance] = []
         var results: [Balance] = []
         for line in lines {
-            if line.hasPrefix("#UB") {
+            // #RES is "Utgående balans", 0 indicates that it's from this year
+            if line.hasPrefix("#UB 0") {
                 balances.append(Balance(line, accounts: accounts))
             }
-            if line.hasPrefix("#RES") {
+            // #RES is a result-line, 0 indicates that it's from this year
+            if line.hasPrefix("#RES 0") {
                 results.append(Balance(line, accounts: accounts))
             }
         }
