@@ -188,11 +188,14 @@ class SRUBlankett: SRU {
             "#UPPGIFT 7011 \(sie.startDate)",
             "#UPPGIFT 7012 \(sie.endDate)"
         ]
-        return header + uppgifter.map({ "#UPPGIFT \($0.0) \($0.1)" }) + ["#BLANKETTSLUT"]
+        return header + uppgifter.sorted {$0.0 < $1.0 }.map({ "#UPPGIFT \($0.0) \($0.1)" }) + ["#BLANKETTSLUT"]
     }
 
     func convert(decimal: Decimal) -> Int {
-        return (abs(decimal) as NSDecimalNumber).intValue
+        var dec = decimal
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &dec, 0, .bankers)
+        return (rounded as NSDecimalNumber).intValue
     }
 }
 
@@ -218,6 +221,7 @@ class SRUINK2S: SRUBlankett {
         return [
             (7650, convert(decimal: result.balance)),
             (7651, convert(decimal: tax.balance)),
+            (7670, convert(decimal: result.balance + tax.balance)),
             (8041, "X"), // Uppdragstagare (t.ex.) redovisningskonsult) har biträtt vid upprättandet av årsredovisningen: Nej
             (8045, "X"), // Årsredovisningen har varit föremål för revision: Nej
         ]
