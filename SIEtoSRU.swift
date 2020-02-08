@@ -218,10 +218,14 @@ class SRUINK2S: SRUBlankett {
         print(sie.results)
         let result = sie.results.first(where: { $0.account.sru == 7450 })!
         let tax = sie.results.first(where: { $0.account.sru == 7528 })!
+        let taxInterestCost = sie.results.first(where: { $0.account.number == 8314 })!
+        let taxFreeIncome = sie.results.first(where: { $0.account.number == 8423 })!
         return [
             (7650, convert(decimal: result.balance)),
             (7651, convert(decimal: tax.balance)),
-            (7670, convert(decimal: result.balance + tax.balance)),
+            (7653, convert(decimal: taxInterestCost.balance)),
+            (7754, convert(decimal: taxFreeIncome.balance)),
+            (7670, convert(decimal: result.balance + tax.balance + taxInterestCost.balance + taxFreeIncome.balance)),
             (8041, "X"), // Uppdragstagare (t.ex.) redovisningskonsult) har biträtt vid upprättandet av årsredovisningen: Nej
             (8045, "X"), // Årsredovisningen har varit föremål för revision: Nej
         ]
