@@ -218,8 +218,8 @@ class SRUINK2S: SRUBlankett {
         print(sie.results)
         let result = sie.results.first(where: { $0.account.sru == 7450 })!
         let tax = sie.results.first(where: { $0.account.sru == 7528 })!
-        let taxInterestCost = sie.results.first(where: { $0.account.number == 8314 })!
-        let taxFreeIncome = sie.results.first(where: { $0.account.number == 8423 })!
+        let taxInterestCost = sie.results.first(where: { $0.account.number == 8423 })!
+        let taxFreeIncome = sie.results.first(where: { $0.account.number == 8314 })!
         return [
             (7650, convert(decimal: result.balance)),
             (7651, convert(decimal: tax.balance)),
