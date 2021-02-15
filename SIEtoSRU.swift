@@ -215,20 +215,23 @@ class SRUINK2S: SRUBlankett {
     }
     override var uppgifter: [(Int, Any)] {
         // Remove total result and tax
-        print(sie.results)
+        for r in sie.results {
+            print(r)
+        }
         let result = sie.results.first(where: { $0.account.sru == 7450 })!
         let tax = sie.results.first(where: { $0.account.sru == 7528 })!
-        let taxInterestCost = sie.results.first(where: { $0.account.number == 8423 })!
-        let taxFreeIncome = sie.results.first(where: { $0.account.number == 8314 })!
+        let taxInterestCost = sie.results.first(where: { $0.account.number == 8423 })
+        let taxFreeIncome = sie.results.first(where: { $0.account.number == 8314 })
+        let sum: Decimal = [result, tax, taxInterestCost, taxFreeIncome].compactMap { $0?.balance }.reduce(0, +)
         return [
             (7650, convert(decimal: result.balance)),
             (7651, convert(decimal: tax.balance)),
-            (7653, convert(decimal: taxInterestCost.balance)),
-            (7754, convert(decimal: taxFreeIncome.balance)),
-            (7670, convert(decimal: result.balance + tax.balance + taxInterestCost.balance + taxFreeIncome.balance)),
+            taxInterestCost.map { (7653, convert(decimal: $0.balance)) },
+            taxFreeIncome.map { (7754, convert(decimal: $0.balance)) },
+            (7670, convert(decimal: sum)),
             (8041, "X"), // Uppdragstagare (t.ex.) redovisningskonsult) har biträtt vid upprättandet av årsredovisningen: Nej
             (8045, "X"), // Årsredovisningen har varit föremål för revision: Nej
-        ]
+        ].compactMap { (row: (Int, Any)?) in row }
     }
 }
 
