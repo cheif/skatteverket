@@ -121,7 +121,13 @@ class SRU {
     let sie: SIE
     let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd hhmmss"
+        formatter.dateFormat = "yyyyMMdd"
+        return formatter
+    }()
+
+    let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "hhmmss"
         return formatter
     }()
 
@@ -148,7 +154,7 @@ class SRUInfo: SRU {
         return [
             "#DATABESKRIVNING_START",
             "#PRODUKT SRU",
-            "#SKAPAD \(dateFormatter.string(from: Date()))",
+            "#SKAPAD \(dateFormatter.string(from: .init())) \(timeFormatter.string(from: .init()))",
             "#PROGRAM SIEtoSRU",
             "#FILNAMN BLANKETTER.SRU",
             "#DATABESKRIVNING_SLUT",
@@ -180,15 +186,30 @@ class SRUBlankett: SRU {
     }
 
     override var lines: [String] {
+        let date = dateFormatter.string(from: .init())
+        let time = timeFormatter.string(from: .init())
         let header = [
             "#BLANKETT \(name)",
-            "#IDENTITET \(orgNr) \(dateFormatter.string(from: Date()))",
+            "#IDENTITET \(orgNr) \(date) \(time)",
             "#NAMN \(sie.companyInfo.name)",
             "#SYSTEMINFO Testad på https://www1.skatteverket.se/fv/fv_web/systemval.do?produkt=SRU",
             "#UPPGIFT 7011 \(sie.startDate)",
             "#UPPGIFT 7012 \(sie.endDate)"
         ]
         return header + uppgifter.sorted {$0.0 < $1.0 }.map({ "#UPPGIFT \($0.0) \($0.1)" }) + ["#BLANKETTSLUT"]
+    }
+
+    var resultAffectingPosts: [(Int, Int)] {
+        let result = sie.results.first(where: { $0.account.sru == 7450 })!
+        let tax = sie.results.first(where: { $0.account.sru == 7528 })!
+        let taxInterestCost = sie.results.first(where: { $0.account.number == 8423 })
+        let taxFreeIncome = sie.results.first(where: { $0.account.number == 8314 })
+        return [
+            (7650, convert(decimal: result.balance)),
+            (7651, convert(decimal: tax.balance)),
+            taxInterestCost.map { (7653, convert(decimal: $0.balance)) },
+            taxFreeIncome.map { (7754, convert(decimal: $0.balance)) },
+        ].compactMap { $0 }
     }
 
     func convert(decimal: Decimal) -> Int {
@@ -199,10 +220,19 @@ class SRUBlankett: SRU {
     }
 }
 
-class SRUINK2R: SRUBlankett {
-    override var name: String {
-        return "INK2R-2017P4"
+class SRUINK2: SRUBlankett {
+    override var name: String { "INK2-2020P4" }
+
+    override var uppgifter: [(Int, Any)] {
+        return [
+            (7104, resultAffectingPosts.map(\.1).reduce(0, +))
+        ]
     }
+}
+
+class SRUINK2R: SRUBlankett {
+    override var name: String { "INK2R-2020P4" }
+
     override var uppgifter: [(Int, Any)] {
         return (SRUBlankett.groupBalances(sie.endingBalances) + SRUBlankett.groupBalances(sie.results)).map({ ($0.0, convert(decimal: $0.1)) })
     }
@@ -210,28 +240,16 @@ class SRUINK2R: SRUBlankett {
 }
 
 class SRUINK2S: SRUBlankett {
-    override var name: String {
-        return "INK2S-2014P4"
-    }
+    override var name: String { "INK2S-2014P4" }
+
     override var uppgifter: [(Int, Any)] {
         // Remove total result and tax
-        for r in sie.results {
-            print(r)
-        }
-        let result = sie.results.first(where: { $0.account.sru == 7450 })!
-        let tax = sie.results.first(where: { $0.account.sru == 7528 })!
-        let taxInterestCost = sie.results.first(where: { $0.account.number == 8423 })
-        let taxFreeIncome = sie.results.first(where: { $0.account.number == 8314 })
-        let sum: Decimal = [result, tax, taxInterestCost, taxFreeIncome].compactMap { $0?.balance }.reduce(0, +)
-        return [
-            (7650, convert(decimal: result.balance)),
-            (7651, convert(decimal: tax.balance)),
-            taxInterestCost.map { (7653, convert(decimal: $0.balance)) },
-            taxFreeIncome.map { (7754, convert(decimal: $0.balance)) },
-            (7670, convert(decimal: sum)),
+        let sum = resultAffectingPosts.map(\.1).reduce(0, +)
+        return resultAffectingPosts + [
+            (7670, sum),
             (8041, "X"), // Uppdragstagare (t.ex.) redovisningskonsult) har biträtt vid upprättandet av årsredovisningen: Nej
             (8045, "X"), // Årsredovisningen har varit föremål för revision: Nej
-        ].compactMap { (row: (Int, Any)?) in row }
+        ]
     }
 }
 
@@ -243,10 +261,11 @@ func main() {
         let data = try! String(contentsOfFile: siePath, encoding: .isoLatin1)
         let sie = try! SIE(data, zipCode: zipCode, postAddress: postAddress)
         let info = SRUInfo(sie)
+        let ink2 = SRUINK2(sie)
         let ink2r = SRUINK2R(sie)
         let ink2s = SRUINK2S(sie)
+        let blanketter = [ink2.toString(), ink2r.toString(), ink2s.toString(), "#FIL_SLUT"].joined(separator: "\n")
         print(info.toString())
-        let blanketter = [ink2r.toString(), ink2s.toString(), "#FIL_SLUT"].joined(separator: "\r\n")
         print(blanketter)
         let infoPath = FileManager.default.currentDirectoryPath + "/INFO.sru"
         try! info.toString().write(toFile: infoPath, atomically: true, encoding: .isoLatin1)
