@@ -221,7 +221,7 @@ class SRUBlankett: SRU {
 }
 
 class SRUINK2: SRUBlankett {
-    override var name: String { "INK2-2022P4" }
+    override var name: String { "INK2-2023P4" }
 
     override var uppgifter: [(Int, Any)] {
         return [
@@ -231,7 +231,7 @@ class SRUINK2: SRUBlankett {
 }
 
 class SRUINK2R: SRUBlankett {
-    override var name: String { "INK2R-2022P4" }
+    override var name: String { "INK2R-2023P4" }
 
     override var uppgifter: [(Int, Any)] {
         return (SRUBlankett.groupBalances(sie.endingBalances) + SRUBlankett.groupBalances(sie.results)).map({ ($0.0, convert(decimal: $0.1)) })
@@ -240,7 +240,7 @@ class SRUINK2R: SRUBlankett {
 }
 
 class SRUINK2S: SRUBlankett {
-    override var name: String { "INK2S-2022P4" }
+    override var name: String { "INK2S-2023P4" }
 
     override var uppgifter: [(Int, Any)] {
         // Remove total result and tax
