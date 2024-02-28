@@ -267,9 +267,12 @@ func main() {
         let blanketter = [ink2.toString(), ink2r.toString(), ink2s.toString(), "#FIL_SLUT"].joined(separator: "\n")
         print(info.toString())
         print(blanketter)
-        let infoPath = FileManager.default.currentDirectoryPath + "/INFO.sru"
+        let year = sie.startDate.prefix(4)
+        let dirPath = FileManager.default.currentDirectoryPath + "/\(year)"
+        try? FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
+        let infoPath = dirPath + "/INFO.sru"
         try! info.toString().write(toFile: infoPath, atomically: true, encoding: .isoLatin1)
-        let blanketterPath = FileManager.default.currentDirectoryPath + "/BLANKETTER.sru"
+        let blanketterPath = dirPath + "/BLANKETTER.sru"
         try! blanketter.write(toFile: blanketterPath, atomically: true, encoding: .isoLatin1)
     }
 }
