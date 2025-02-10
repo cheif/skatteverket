@@ -200,13 +200,13 @@ class SRUBlankett: SRU {
     }
 
     var resultAffectingPosts: [(Int, Int)] {
-        let result = sie.results.first(where: { $0.account.sru == 7450 })!
-        let tax = sie.results.first(where: { $0.account.sru == 7528 })!
+        let result = sie.results.first(where: { $0.account.sru == 7450 })!.balance
+        let taxBalance = sie.results.first(where: { $0.account.sru == 7528 })?.balance ?? 0.0
         let taxInterestCost = sie.results.first(where: { $0.account.number == 8423 })
         let taxFreeIncome = sie.results.first(where: { $0.account.number == 8314 })
         return [
-            (7650, convert(decimal: result.balance)),
-            (7651, convert(decimal: tax.balance)),
+            (7650, convert(decimal: result)),
+            (7651, convert(decimal: taxBalance)),
             taxInterestCost.map { (7653, convert(decimal: $0.balance)) },
             taxFreeIncome.map { (7754, convert(decimal: $0.balance)) },
         ].compactMap { $0 }
@@ -221,35 +221,62 @@ class SRUBlankett: SRU {
 }
 
 class SRUINK2: SRUBlankett {
-    override var name: String { "INK2-2023P4" }
+    override var name: String { "INK2-2024P4" }
 
     override var uppgifter: [(Int, Any)] {
+        let result = resultAffectingPosts.map(\.1).reduce(0, +)
         return [
-            (7104, resultAffectingPosts.map(\.1).reduce(0, +))
+            maybeNegative(pos: 7104, neg: 7114, val: result)
         ]
     }
 }
 
 class SRUINK2R: SRUBlankett {
-    override var name: String { "INK2R-2023P4" }
+    override var name: String { "INK2R-2024P4" }
 
     override var uppgifter: [(Int, Any)] {
         return (SRUBlankett.groupBalances(sie.endingBalances) + SRUBlankett.groupBalances(sie.results)).map({ ($0.0, convert(decimal: $0.1)) })
+            .map { sru, val in
+                // We need to flip "Årets resultat" if it's negative
+                if sru == 7450 && val < 0 {
+                    return (7550, -val)
+                } else {
+                    return (sru, val)
+                }
+            }
     }
 
 }
 
 class SRUINK2S: SRUBlankett {
-    override var name: String { "INK2S-2023P4" }
+    override var name: String { "INK2S-2024P4" }
 
     override var uppgifter: [(Int, Any)] {
         // Remove total result and tax
         let sum = resultAffectingPosts.map(\.1).reduce(0, +)
-        return resultAffectingPosts + [
-            (7670, sum),
+        print("Sum", sum)
+        return resultAffectingPosts
+            .map { sru, val in 
+                // We need to flip "Årets resultat" if it's negative
+                if sru == 7650 && val < 0 {
+                    return (7750, -val)
+                } else {
+                    return (sru, val)
+                }
+            }
+            + [
+            maybeNegative(pos: 7670, neg: 7770, val: sum),
             (8041, "X"), // Uppdragstagare (t.ex.) redovisningskonsult) har biträtt vid upprättandet av årsredovisningen: Nej
             (8045, "X"), // Årsredovisningen har varit föremål för revision: Nej
         ]
+    }
+}
+
+private func maybeNegative(pos: Int, neg: Int, val: Int) -> (Int, Int) {
+    if val >= 0 {
+        return (pos, val)
+    } else {
+        return (neg, -val)
     }
 }
 
