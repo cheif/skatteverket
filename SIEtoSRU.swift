@@ -5,6 +5,8 @@ import Foundation
  *
  * Has been tested with a SIE export from bokio.se, which produced INFO.sru and BLANKETTER.sru which were uploaded to skatteverket. But most cases are probably not handled.
  * You'll need to provide zipCode and post-address yourself, since this isn't present in the SIE-file
+ *
+ * Info: https://skatteverket.se/foretag/inkomstdeklaration/forredovisningsbyraer/tekniskinformationomfiloverforing.4.13948c0e18e810bfa0cca8.html
 */
 
 extension Sequence where Element == String {
@@ -230,7 +232,7 @@ class SRUBlankett: SRU {
 }
 
 class SRUINK2: SRUBlankett {
-    override var name: String { "INK2-2024P4" }
+    override var name: String { "INK2-2025P4" }
 
     override var uppgifter: [(Int, Any)] {
         let result = resultAffectingPosts.map(\.1).reduce(0, +)
@@ -241,7 +243,7 @@ class SRUINK2: SRUBlankett {
 }
 
 class SRUINK2R: SRUBlankett {
-    override var name: String { "INK2R-2024P4" }
+    override var name: String { "INK2R-2025P4" }
 
     override var uppgifter: [(Int, Any)] {
         return
@@ -260,7 +262,7 @@ class SRUINK2R: SRUBlankett {
 }
 
 class SRUINK2S: SRUBlankett {
-    override var name: String { "INK2S-2024P4" }
+    override var name: String { "INK2S-2025P4" }
 
     override var uppgifter: [(Int, Any)] {
         // Remove total result and tax
