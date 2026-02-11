@@ -1,11 +1,11 @@
 #!/usr/bin/swift
 import Foundation
+
 /* Usage: ./SIEtoSRU.swift {SIEFile}.se {zipCode} {post-address}
  *
  * Has been tested with a SIE export from bokio.se, which produced INFO.sru and BLANKETTER.sru which were uploaded to skatteverket. But most cases are probably not handled.
  * You'll need to provide zipCode and post-address yourself, since this isn't present in the SIE-file
 */
-
 
 extension Sequence where Element == String {
     func findNext(_ name: String) -> [String] {
@@ -163,7 +163,7 @@ class SRUInfo: SRU {
             "#NAMN \(companyInfo.name)",
             "#POSTNR \(companyInfo.zipCode)",
             "#POSTORT \(companyInfo.postAddress)",
-            "#MEDIELEV_SLUT"
+            "#MEDIELEV_SLUT",
         ]
     }
 }
@@ -178,11 +178,18 @@ class SRUBlankett: SRU {
     }
 
     static func groupBalances(_ balances: [SIE.Balance]) -> [(Int, Decimal)] {
-        let nonempty = balances.filter({ $0.balance != 0})
+        let nonempty = balances.filter({ $0.balance != 0 })
         let grouped = Dictionary(grouping: nonempty, by: { $0.account.sru })
-        return grouped.map({ ($0, $1.reduce(0, { (acc, balance) in
-            return acc + balance.balance
-        }))})
+        return grouped.map({
+            (
+                $0,
+                $1.reduce(
+                    0,
+                    { (acc, balance) in
+                        return acc + balance.balance
+                    })
+            )
+        })
     }
 
     override var lines: [String] {
@@ -194,9 +201,11 @@ class SRUBlankett: SRU {
             "#NAMN \(sie.companyInfo.name)",
             "#SYSTEMINFO Testad på https://www1.skatteverket.se/fv/fv_web/systemval.do?produkt=SRU",
             "#UPPGIFT 7011 \(sie.startDate)",
-            "#UPPGIFT 7012 \(sie.endDate)"
+            "#UPPGIFT 7012 \(sie.endDate)",
         ]
-        return header + uppgifter.sorted {$0.0 < $1.0 }.map({ "#UPPGIFT \($0.0) \($0.1)" }) + ["#BLANKETTSLUT"]
+        return header + uppgifter.sorted { $0.0 < $1.0 }.map({ "#UPPGIFT \($0.0) \($0.1)" }) + [
+            "#BLANKETTSLUT"
+        ]
     }
 
     var resultAffectingPosts: [(Int, Int)] {
@@ -235,7 +244,9 @@ class SRUINK2R: SRUBlankett {
     override var name: String { "INK2R-2024P4" }
 
     override var uppgifter: [(Int, Any)] {
-        return (SRUBlankett.groupBalances(sie.endingBalances) + SRUBlankett.groupBalances(sie.results)).map({ ($0.0, convert(decimal: $0.1)) })
+        return
+            (SRUBlankett.groupBalances(sie.endingBalances) + SRUBlankett.groupBalances(sie.results))
+            .map({ ($0.0, convert(decimal: $0.1)) })
             .map { sru, val in
                 // We need to flip "Årets resultat" if it's negative
                 if sru == 7450 && val < 0 {
@@ -255,8 +266,9 @@ class SRUINK2S: SRUBlankett {
         // Remove total result and tax
         let sum = resultAffectingPosts.map(\.1).reduce(0, +)
         print("Sum", sum)
-        return resultAffectingPosts
-            .map { sru, val in 
+        return
+            resultAffectingPosts
+            .map { sru, val in
                 // We need to flip "Årets resultat" if it's negative
                 if sru == 7650 && val < 0 {
                     return (7750, -val)
@@ -265,10 +277,10 @@ class SRUINK2S: SRUBlankett {
                 }
             }
             + [
-            maybeNegative(pos: 7670, neg: 7770, val: sum),
-            (8041, "X"), // Uppdragstagare (t.ex.) redovisningskonsult) har biträtt vid upprättandet av årsredovisningen: Nej
-            (8045, "X"), // Årsredovisningen har varit föremål för revision: Nej
-        ]
+                maybeNegative(pos: 7670, neg: 7770, val: sum),
+                (8041, "X"),  // Uppdragstagare (t.ex.) redovisningskonsult) har biträtt vid upprättandet av årsredovisningen: Nej
+                (8045, "X"),  // Årsredovisningen har varit föremål för revision: Nej
+            ]
     }
 }
 
@@ -282,7 +294,8 @@ private func maybeNegative(pos: Int, neg: Int, val: Int) -> (Int, Int) {
 
 func main() {
     if CommandLine.arguments.count > 3,
-        let zipCode = Int(CommandLine.arguments[2]) {
+        let zipCode = Int(CommandLine.arguments[2])
+    {
         let siePath = CommandLine.arguments[1]
         let postAddress = CommandLine.arguments[3]
         let data = try! String(contentsOfFile: siePath, encoding: .isoLatin1)
@@ -291,12 +304,14 @@ func main() {
         let ink2 = SRUINK2(sie)
         let ink2r = SRUINK2R(sie)
         let ink2s = SRUINK2S(sie)
-        let blanketter = [ink2.toString(), ink2r.toString(), ink2s.toString(), "#FIL_SLUT"].joined(separator: "\n")
+        let blanketter = [ink2.toString(), ink2r.toString(), ink2s.toString(), "#FIL_SLUT"].joined(
+            separator: "\n")
         print(info.toString())
         print(blanketter)
         let year = sie.startDate.prefix(4)
         let dirPath = FileManager.default.currentDirectoryPath + "/\(year)"
-        try? FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
+        try? FileManager.default.createDirectory(
+            atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
         let infoPath = dirPath + "/INFO.sru"
         try! info.toString().write(toFile: infoPath, atomically: true, encoding: .isoLatin1)
         let blanketterPath = dirPath + "/BLANKETTER.sru"
